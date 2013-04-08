@@ -177,14 +177,34 @@ public final class Formatters {
 
     private static abstract class SegmentedFormatStep extends JustifyingFormatStep {
         private final int count;
+        private final boolean minify;
 
-        protected SegmentedFormatStep(final boolean leftJustify, final int minimumWidth, final int maximumWidth, final int count) {
+        protected SegmentedFormatStep(final boolean leftJustify, final int minimumWidth, final int maximumWidth, final int count, final boolean minify) {
             super(leftJustify, minimumWidth, maximumWidth);
             this.count = count;
+            this.minify = minify;
         }
 
         public void renderRaw(final StringBuilder builder, final ExtLogRecord record) {
-            builder.append(applySegments(count, getSegmentedSubject(record)));
+        	String subject = getSegmentedSubject(record);
+        	if(this.minify) {
+        		subject = minifySubject(subject);
+        	}
+            builder.append(applySegments(count, subject));
+        }
+        
+        private String minifySubject(String subject) {
+        	StringBuilder minSubject = new StringBuilder();
+        	String[] segments = subject.split("\\.");
+        	for(int i = 0;i<segments.length;i++) {
+        		if(i == segments.length-1) {
+        			minSubject.append(segments[i]);
+        		}
+        		else {
+        			minSubject.append(segments[i].charAt(0)).append(".");
+        		}
+        	}
+        	return minSubject.toString();
         }
 
         public abstract String getSegmentedSubject(final ExtLogRecord record);
@@ -197,10 +217,11 @@ public final class Formatters {
      * @param minimumWidth the minimum field width, or 0 for none
      * @param maximumWidth the maximum field width (must be greater than {@code minimumFieldWidth}), or 0 for none
      * @param count the maximum number of logger name segments to emit (counting from the right)
+     * @param minify minify the logger name
      * @return the format step
      */
-    public static FormatStep loggerNameFormatStep(final boolean leftJustify, final int minimumWidth, final int maximumWidth, final int count) {
-        return new SegmentedFormatStep(leftJustify, minimumWidth, maximumWidth, count) {
+    public static FormatStep loggerNameFormatStep(final boolean leftJustify, final int minimumWidth, final int maximumWidth, final int count, final boolean minify) {
+        return new SegmentedFormatStep(leftJustify, minimumWidth, maximumWidth, count, minify) {
             public String getSegmentedSubject(final ExtLogRecord record) {
                 return record.getLoggerName();
             }
@@ -215,10 +236,11 @@ public final class Formatters {
      * @param minimumWidth the minimum field width, or 0 for none
      * @param maximumWidth the maximum field width (must be greater than {@code minimumFieldWidth}), or 0 for none
      * @param count the maximum number of class name segments to emit (counting from the right)
+     * @param minify minify the class name
      * @return the format step
      */
-    public static FormatStep classNameFormatStep(final boolean leftJustify, final int minimumWidth, final int maximumWidth, final int count) {
-        return new SegmentedFormatStep(leftJustify, minimumWidth, maximumWidth, count) {
+    public static FormatStep classNameFormatStep(final boolean leftJustify, final int minimumWidth, final int maximumWidth, final int count, final boolean minify) {
+        return new SegmentedFormatStep(leftJustify, minimumWidth, maximumWidth, count, minify) {
             public String getSegmentedSubject(final ExtLogRecord record) {
                 return record.getSourceClassName();
             }
@@ -754,6 +776,39 @@ public final class Formatters {
             }
         };
     }
+    
+    /**
+     * Create a format step which emits the id of the thread which originated the log record.
+     *
+     * @param leftJustify {@code true} to left justify, {@code false} to right justify
+     * @param minimumWidth the minimum field width, or 0 for none
+     * @param maximumWidth the maximum field width (must be greater than {@code minimumFieldWidth}), or 0 for none
+     * @return the format step
+     */
+    public static FormatStep threadIdFormatStep(final boolean leftJustify, final int minimumWidth, final int maximumWidth) {
+        return new JustifyingFormatStep(leftJustify, minimumWidth, maximumWidth) {
+            public void renderRaw(final StringBuilder builder, final ExtLogRecord record) {
+                builder.append(record.getThreadID());
+            }
+        };
+    }
+    
+    /**
+     * Create a format step which emits a system property.
+     *
+     * @param propertyName The name of the system property
+     * @param leftJustify {@code true} to left justify, {@code false} to right justify
+     * @param minimumWidth the minimum field width, or 0 for none
+     * @param maximumWidth the maximum field width (must be greater than {@code minimumFieldWidth}), or 0 for none
+     * @return the format step
+     */
+    public static FormatStep systemPropertyFormatStep(final String propertyName, final boolean leftJustify, final int minimumWidth, final int maximumWidth) {
+        return new JustifyingFormatStep(leftJustify, minimumWidth, maximumWidth) {
+            public void renderRaw(final StringBuilder builder, final ExtLogRecord record) {
+                builder.append(System.getProperty(propertyName));
+            }
+        };
+    }
 
     /**
      * Create a format step which emits the NDC value of the log record.
@@ -761,10 +816,11 @@ public final class Formatters {
      * @param leftJustify {@code true} to left justify, {@code false} to right justify
      * @param minimumWidth the minimum field width, or 0 for none
      * @param maximumWidth the maximum field width (must be greater than {@code minimumFieldWidth}), or 0 for none
+     * @param minify minify the logger name
      * @return the format step
      */
     public static FormatStep ndcFormatStep(final boolean leftJustify, final int minimumWidth, final int maximumWidth) {
-        return ndcFormatStep(leftJustify, minimumWidth, maximumWidth, 0);
+        return ndcFormatStep(leftJustify, minimumWidth, maximumWidth, 0, false);
     }
 
     /**
@@ -774,10 +830,11 @@ public final class Formatters {
      * @param minimumWidth the minimum field width, or 0 for none
      * @param maximumWidth the maximum field width (must be greater than {@code minimumFieldWidth}), or 0 for none
      * @param count the limit to the number of segments to format
+     * @param minify minify the logger name
      * @return the format step
      */
-    public static FormatStep ndcFormatStep(final boolean leftJustify, final int minimumWidth, final int maximumWidth, final int count) {
-        return new SegmentedFormatStep(leftJustify, minimumWidth, maximumWidth, count) {
+    public static FormatStep ndcFormatStep(final boolean leftJustify, final int minimumWidth, final int maximumWidth, final int count, final boolean minify) {
+        return new SegmentedFormatStep(leftJustify, minimumWidth, maximumWidth, count, minify) {
             public String getSegmentedSubject(final ExtLogRecord record) {
                 return NDC.get();
             }
