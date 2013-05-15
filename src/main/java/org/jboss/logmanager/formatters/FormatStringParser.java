@@ -36,20 +36,20 @@ public final class FormatStringParser {
      * The regular expression for format strings.  Ain't regex grand?
      */
     private static final Pattern pattern = Pattern.compile(
-                // greedily match all non-format characters
-                "([^%]++)" +
-                // match a format string...
-                "|(?:%" +
-                    // optional minimum width plus justify flag
-                    "(?:(-)?(\\d+))?" +
-                    // optional maximum width
-                    "(?:\\.(\\d+))?" +
-                    // the actual format character
-                    "(.)" +
-                    // an optional argument string
-                    "(?:\\{([^}]*)\\})?" +
-                // end format string
-                ")"
+            // greedily match all non-format characters
+            "([^%)]++)" +
+            // match a format string...
+            "|(?:%" +
+                // optional minimum width plus justify flag
+                "(?:(-)?(\\d+))?" +
+                // optional maximum width
+                "(?:\\.(\\d+))?" +
+                // the actual format character
+                "(.)" +
+                // an optional argument string
+                "(?:\\{([^}]*)\\})?" +
+            // end format string
+            ")" 
     );
 
     private FormatStringParser() {
@@ -82,13 +82,23 @@ public final class FormatStringParser {
                 final char formatChar = formatCharString.charAt(0);
                 switch (formatChar) {
                     case 'c': {
-                        final int count = argument == null ? 0 : Integer.parseInt(argument);
-                        stepList.add(Formatters.loggerNameFormatStep(leftJustify, minimumWidth, maximumWidth, count));
+                    	if("min".equals(argument)) {
+                    		stepList.add(Formatters.loggerNameFormatStep(leftJustify, minimumWidth, maximumWidth, 0, true));
+                    	}
+                    	else {
+                    		final int count = argument == null ? 0 : Integer.parseInt(argument);
+                    		stepList.add(Formatters.loggerNameFormatStep(leftJustify, minimumWidth, maximumWidth, count, false));
+                    	}
                         break;
                     }
                     case 'C': {
-                        final int count = argument == null ? 0 : Integer.parseInt(argument);
-                        stepList.add(Formatters.classNameFormatStep(leftJustify, minimumWidth, maximumWidth, count));
+                    	if("min".equals(argument)) {
+                    		stepList.add(Formatters.classNameFormatStep(leftJustify, minimumWidth, maximumWidth, 0, true));
+                    	}
+                    	else {
+                    		final int count = argument == null ? 0 : Integer.parseInt(argument);
+                    		stepList.add(Formatters.classNameFormatStep(leftJustify, minimumWidth, maximumWidth, count, false));
+                    	}
                         break;
                     }
                     case 'd': {
@@ -148,12 +158,22 @@ public final class FormatStringParser {
                         break;
                     }
                     case 't': {
-                        stepList.add(Formatters.threadNameFormatStep(leftJustify, minimumWidth, maximumWidth));
+                    	if("id".equals(argument)) {
+                    		stepList.add(Formatters.threadIdFormatStep(leftJustify, minimumWidth, maximumWidth));
+                    	}
+                    	else {
+                    		stepList.add(Formatters.threadNameFormatStep(leftJustify, minimumWidth, maximumWidth));
+                    	}
                         break;
                     }
                     case 'x': {
-                        final int count = argument == null ? 0 : Integer.parseInt(argument);
-                        stepList.add(Formatters.ndcFormatStep(leftJustify, minimumWidth, maximumWidth, count));
+                    	if("min".equals(argument)) {
+                    		stepList.add(Formatters.ndcFormatStep(leftJustify, minimumWidth, maximumWidth, 0, true));
+                    	}
+                    	else {
+                    		final int count = argument == null ? 0 : Integer.parseInt(argument);
+                            stepList.add(Formatters.ndcFormatStep(leftJustify, minimumWidth, maximumWidth, count, false));
+                    	}
                         break;
                     }
                     case 'X': {
@@ -164,8 +184,12 @@ public final class FormatStringParser {
                         timeZone = TimeZone.getTimeZone(argument);
                         break;
                     }
+                    case '$': {
+                    	stepList.add(Formatters.systemPropertyFormatStep(argument, leftJustify, minimumWidth, maximumWidth));
+                        break;
+                    }
                     case '%': {
-                        stepList.add(Formatters.textFormatStep("%"));
+                    	stepList.add(Formatters.textFormatStep("%"));
                         break;
                     }
                     default: {
